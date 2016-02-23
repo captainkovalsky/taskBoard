@@ -1,10 +1,12 @@
 import {Directive, ElementRef, Input} from 'angular2/core';
+
+let moveFn: any;
+let upFn: any;
+const BODY = document.querySelector('body');
 @Directive({
     selector: '[myDraggable]',
     host: {
-    '(mousedown)': 'onMouseDown($event)',
-    '(mousemove)': 'onMouseMove($event)',
-    '(mouseup)': 'endDrag($event)'
+    '(mousedown)': 'onMouseDown($event)'
    }
 })
 export class DraggableDirective {
@@ -12,12 +14,10 @@ export class DraggableDirective {
     private startY: number;
     private x: number;
     private y: number;
-    private isMoved: boolean;
 
     private zIndex: Number;
 
     constructor(private el: ElementRef) {
-      this.isMoved = false;
       this.startX = 0;
       this.startY = 0;
       this.x = 0;
@@ -26,26 +26,30 @@ export class DraggableDirective {
     }
 
     onMouseDown($event: MouseEvent) {
-      event.preventDefault();
+      $event.preventDefault();
       this.startX = $event.clientX - this.x;
       this.startY = $event.clientY - this.y;
-      this.isMoved = true;
       this.el.nativeElement.style.zIndex += 1;
+
+      moveFn = this.onMouseMove(this.el).bind(this);
+      upFn = this.endDrag.bind(this);
+
+      BODY.addEventListener('mousemove', moveFn);
+      BODY.addEventListener('mouseup', upFn);
     }
 
-    onMouseMove($event: MouseEvent, el: ElementRef) {
-      if (!this.isMoved) {
-        return;
+    onMouseMove(el: ElementRef) {
+      return function($event: MouseEvent) {
+        this.x = $event.clientX - this.startX;
+        this.y = $event.clientY - this.startY;
+        el.nativeElement.style.top = `${this.y}px`;
+        el.nativeElement.style.left = `${this.x}px`;
       }
-
-      this.x = $event.clientX - this.startX;
-      this.y = $event.clientY - this.startY;
-      this.el.nativeElement.style.top = `${this.y}px`;
-      this.el.nativeElement.style.left = `${this.x}px`;
   }
 
     endDrag($event: MouseEvent) {
-      this.isMoved = false;
       this.el.nativeElement.style.zIndex -= 1;
+      BODY.removeEventListener('mousemove', moveFn);
+      BODY.removeEventListener('mouseup', upFn);
     }
 }
